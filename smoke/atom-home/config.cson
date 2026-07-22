@@ -1,0 +1,16 @@
+# Fixed ATOM_HOME config for deterministic smoke tests.
+# The smoke harness copies this into a throwaway ATOM_HOME so the app always
+# launches with a known theme and vertical-tabs state, regardless of the
+# developer's real ~/.tranquil config.
+"*":
+  core:
+    themes: [
+      "tranquil-business-dark"
+      "one-dark-syntax"
+    ]
+    disabledPackages: [
+      "welcome"
+      "background-tips"
+    ]
+  "tranquil-automations":
+    showVerticalTabs: true
