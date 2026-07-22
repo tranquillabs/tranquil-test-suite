@@ -12,6 +12,7 @@ import { launch } from "./lib/launch.ts";
 import { adr0012 } from "./suites/adr-0012-vertical-tabs.ts";
 import { adr0013 } from "./suites/adr-0013-ui-variables.ts";
 import { settingsTab } from "./suites/settings-default-tab.ts";
+import { urlBookmarkSave } from "./suites/url-bookmark-save.ts";
 
 Deno.test("Tranquil UI smoke", async (t) => {
   const app = await launch();
@@ -21,6 +22,10 @@ Deno.test("Tranquil UI smoke", async (t) => {
       await t.step("ADR-0012 vertical tab panel", () => adr0012(cdp));
       await t.step("ADR-0013 ui-variables", () => adr0013(cdp));
       await t.step("Settings default tab", () => settingsTab(cdp));
+      await t.step(
+        "Save browser tab as .url bookmark",
+        () => urlBookmarkSave(cdp),
+      );
     } finally {
       cdp.close();
     }
