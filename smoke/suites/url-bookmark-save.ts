@@ -33,7 +33,11 @@ export async function urlBookmarkSave(cdp: Cdp): Promise<void> {
   })()`);
 
   // 1. Open the fixture as a browser tab; wait for the webview's live <title>.
-  await cdp.evalInAtom(`atom.workspace.open(${JSON.stringify(fixtureUrl)})`);
+  //    (.then(()=>true) so the eval returns a primitive, never the browser model
+  //    — returnByValue can't serialize that live object.)
+  await cdp.evalInAtom(
+    `atom.workspace.open(${JSON.stringify(fixtureUrl)}).then(() => true)`,
+  );
   await cdp.waitFor(`(() => {
     const item = atom.workspace.getCenter().getActivePaneItem();
     const wv = item && item.view && item.view.htmlv && item.view.htmlv[0];
@@ -82,6 +86,29 @@ export async function urlBookmarkSave(cdp: Cdp): Promise<void> {
     `save button must not add a numbered prefix, got ${
       JSON.stringify(saved.siblings)
     }`,
+  );
+
+  // 3b. The cmd-s COMMAND path (tranquil-browser:save-url) writes the same
+  //     bookmark — not only the toolbar button. Delete the artifact, make the
+  //     fixture browser tab active, dispatch the command, expect it recreated.
+  await cdp.evalInAtom(`(() => {
+    try { require('fs').unlinkSync(${
+    JSON.stringify(expected)
+  }); } catch (e) { /* absent */ }
+    const item = atom.workspace.getPaneItems().find(
+      (i) => i.getURL && i.getURL() === ${JSON.stringify(fixtureUrl)},
+    );
+    if (item) { const p = atom.workspace.paneForItem(item); if (p) p.activateItem(item); }
+    atom.commands.dispatch(atom.views.getView(atom.workspace), 'tranquil-browser:save-url');
+    return true;
+  })()`);
+  const savedByCommand = await cdp.waitFor<boolean>(
+    `require('fs').existsSync(${JSON.stringify(expected)})`,
+  );
+  assertEquals(
+    savedByCommand,
+    true,
+    "the tranquil-browser:save-url command should write the .url bookmark",
   );
 
   // 4. Reserved characters in a title are sanitized to a filesystem-safe name.

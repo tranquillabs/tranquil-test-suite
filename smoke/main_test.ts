@@ -13,6 +13,9 @@ import { adr0012 } from "./suites/adr-0012-vertical-tabs.ts";
 import { adr0013 } from "./suites/adr-0013-ui-variables.ts";
 import { settingsTab } from "./suites/settings-default-tab.ts";
 import { urlBookmarkSave } from "./suites/url-bookmark-save.ts";
+import { focusCtrlTabCenter } from "./suites/focus-ctrl-tab-center.ts";
+import { focusTreeviewKeepSelection } from "./suites/focus-treeview-keep-selection.ts";
+import { focusBackgroundTab } from "./suites/focus-background-tab.ts";
 
 Deno.test("Tranquil UI smoke", async (t) => {
   const app = await launch();
@@ -25,6 +28,18 @@ Deno.test("Tranquil UI smoke", async (t) => {
       await t.step(
         "Save browser tab as .url bookmark",
         () => urlBookmarkSave(cdp),
+      );
+      await t.step(
+        "Ctrl+Tab cycles the center from a focused dock",
+        () => focusCtrlTabCenter(cdp),
+      );
+      await t.step(
+        "Tree-view keeps selection on pathless tabs",
+        () => focusTreeviewKeepSelection(cdp),
+      );
+      await t.step(
+        "Background tab open doesn't steal focus",
+        () => focusBackgroundTab(cdp),
       );
     } finally {
       cdp.close();
