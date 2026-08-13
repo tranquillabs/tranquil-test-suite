@@ -149,10 +149,22 @@ export async function browserUserAgent(cdp: Cdp): Promise<void> {
         return { presets, value: input ? input.value : '' };
       })()`,
     );
+    // Preset list grew from the original four to per-platform variants (tranquil-config
+    // src/index.js) — keep this in lockstep with that array.
     assertEquals(
       combo.presets,
-      ["Chrome", "Firefox", "Edge", "Safari"],
-      "combobox should list the four presets",
+      [
+        "Chrome — macOS",
+        "Chrome — Windows",
+        "Chrome — Linux",
+        "Firefox — macOS",
+        "Firefox — Windows",
+        "Firefox — Linux",
+        "Edge — macOS",
+        "Edge — Windows",
+        "Safari — macOS",
+      ],
+      "combobox should list the platform-variant presets",
     );
     assertStringIncludes(
       combo.value,

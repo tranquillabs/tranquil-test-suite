@@ -8,9 +8,30 @@
       "tranquil-business-dark"
       "one-dark-syntax"
     ]
+    # The Pulsar-only packages tranquil-config disables at runtime, disabled here at
+    # LOAD time instead. tranquil-config's disablePackage() calls race the packages'
+    # own activation — pulsar-updater in particular fires an on-launch update check
+    # during its activate(), so its "An update for Pulsar is available" notification
+    # can land before it's disabled. Config-level disabling means they never activate,
+    # so the smoke instance behaves like the real Tranquil client, deterministically.
+    # Keep in sync with the disablePackage() list in tranquil-config src/index.js.
     disabledPackages: [
       "welcome"
       "background-tips"
+      "pulsar-updater"
+      "git-diff"
+      "open-on-github"
+      "timecop"
+      "about"
+      "autoflow"
+      "dalek"
+      "incompatible-packages"
+      "package-generator"
+      "styleguide"
     ]
+  # Vertical tabs start OFF so the ADR-0012 suite drives the config change itself —
+  # baking `true` here made the panel open during startup, where tranquil-config's
+  # dock guard (which re-hides programmatic dock opens until first user input)
+  # swallowed the reveal and left the dock closed for the whole suite.
   "tranquil-automations":
-    showVerticalTabs: true
+    showVerticalTabs: false

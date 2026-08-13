@@ -28,7 +28,14 @@ export async function adr0012(cdp: Cdp): Promise<void> {
     return true;
   })()`);
 
-  // 2. Force the panel on and wait for it to render.
+  // 2. Release tranquil-config's startup dock guard first: it re-hides programmatic
+  //    right/bottom-dock opens until the first user input (or a 5 s backstop), and a
+  //    CDP-driven suite produces no real input. A synthetic keydown counts.
+  await cdp.evalInAtom(
+    `(document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Shift' })), true)`,
+  );
+
+  //    Then force the panel on and wait for it to render.
   await cdp.evalInAtom(
     `atom.config.set('tranquil-automations.showVerticalTabs', true)`,
   );

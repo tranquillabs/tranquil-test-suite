@@ -5,7 +5,7 @@
 // the project, never tranquil-client). Keep the two in sync.
 
 import { fromFileUrl, join, resolve } from "@std/path";
-import { cdpAlive } from "./cdp.ts";
+import { CDP_PORT, cdpAlive } from "./cdp.ts";
 
 const HERE = fromFileUrl(new URL(".", import.meta.url)); // smoke/lib/
 export const REPO_ROOT = resolve(HERE, "..", ".."); // tranquil-test-suite/
@@ -53,8 +53,9 @@ export type IsolatedApp = {
 export async function launch(): Promise<IsolatedApp> {
   if (await cdpAlive()) {
     throw new Error(
-      "A Tranquil instance is already answering on :9222 — stop it first " +
-        "(the smoke tests need an exclusive CDP port).",
+      `Something is already answering on the test CDP port :${CDP_PORT} — ` +
+        "stop it (or override TRANQUIL_TEST_CDP_PORT); the smoke tests need " +
+        "an exclusive port. A regular dev instance on :9222 is fine.",
     );
   }
 
@@ -70,6 +71,9 @@ export async function launch(): Promise<IsolatedApp> {
   env.ATOM_RESOURCE_PATH = TRANQUIL_CLIENT;
   env.NODE_PATH = join(TRANQUIL_CLIENT, "node_modules");
   env.TRANQUIL_VERIFY = "1";
+  // Own CDP port (start.js honors TRANQUIL_CDP_PORT) so the smoke instance never contends
+  // with a running dev instance on :9222.
+  env.TRANQUIL_CDP_PORT = String(CDP_PORT);
 
   const child = new Deno.Command(electronBinary(), {
     args: [

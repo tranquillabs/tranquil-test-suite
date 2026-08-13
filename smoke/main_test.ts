@@ -17,6 +17,7 @@ import { urlBookmarkSave } from "./suites/url-bookmark-save.ts";
 import { focusCtrlTabCenter } from "./suites/focus-ctrl-tab-center.ts";
 import { focusTreeviewKeepSelection } from "./suites/focus-treeview-keep-selection.ts";
 import { focusBackgroundTab } from "./suites/focus-background-tab.ts";
+import { rpcWebviewInjection } from "./suites/rpc-webview-injection.ts";
 
 Deno.test("Tranquil UI smoke", async (t) => {
   const app = await launch();
@@ -45,6 +46,10 @@ Deno.test("Tranquil UI smoke", async (t) => {
       await t.step(
         "Background tab open doesn't steal focus",
         () => focusBackgroundTab(cdp),
+      );
+      await t.step(
+        "tranquil-rpc injects trusted webviews only",
+        () => rpcWebviewInjection(cdp),
       );
     } finally {
       cdp.close();

@@ -3,7 +3,9 @@
 // Just enough to evaluate JavaScript inside the Tranquil editor window's
 // `atom` global — no external dependencies.
 
-const CDP_PORT = 9222;
+// The smoke instance runs on its own CDP port (via TRANQUIL_CDP_PORT in launch.ts) so tests
+// never contend with a running dev instance on :9222. Override with TRANQUIL_TEST_CDP_PORT.
+export const CDP_PORT = Number(Deno.env.get("TRANQUIL_TEST_CDP_PORT") ?? "9223");
 
 type CdpTarget = {
   type: string;
