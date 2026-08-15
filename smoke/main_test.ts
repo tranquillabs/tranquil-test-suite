@@ -18,6 +18,7 @@ import { focusCtrlTabCenter } from "./suites/focus-ctrl-tab-center.ts";
 import { focusTreeviewKeepSelection } from "./suites/focus-treeview-keep-selection.ts";
 import { focusBackgroundTab } from "./suites/focus-background-tab.ts";
 import { rpcWebviewInjection } from "./suites/rpc-webview-injection.ts";
+import { debuggerBreakpoints } from "./suites/debugger-breakpoints.ts";
 
 Deno.test("Tranquil UI smoke", async (t) => {
   const app = await launch();
@@ -50,6 +51,10 @@ Deno.test("Tranquil UI smoke", async (t) => {
       await t.step(
         "tranquil-rpc injects trusted webviews only",
         () => rpcWebviewInjection(cdp),
+      );
+      await t.step(
+        "Breakpoints bind to the right TypeScript line (ADR-0025)",
+        () => debuggerBreakpoints(cdp),
       );
     } finally {
       cdp.close();
