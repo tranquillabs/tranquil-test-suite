@@ -6,8 +6,10 @@
 // is here to move the generated line away from the source line — if the source-map decoder
 // regresses, the breakpoint suite stops on the wrong statement and fails.
 //
-// No permission grants, deliberately: `ensureConsent` short-circuits when a script asks for
-// nothing, so no approval dialog can block the run.
+// `@permissions none` deliberately: consent short-circuits when a script asks for nothing beyond
+// its own folder, so no approval dialog can block the run. A header is required of every script
+// (ADR-0025), so "none" is how a script says it needs nothing.
+// @permissions none
 
 
 interface Widget {
