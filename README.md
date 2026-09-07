@@ -38,6 +38,24 @@ Add a check: write a `smoke/suites/<name>.ts` exporting `async (cdp) => void`, t
 `t.step(...)` in `smoke/main_test.ts`. Full docs: **Development → Testing → Smoke Tests** in the
 Tranquil dev docs.
 
+### `capnweb` in `deno.json`
+
+`deno.json`'s import map carries a `capnweb` entry that nothing in this repo imports directly. It
+is there for the **fixtures**, which the app runs as automations.
+
+Tranquil resolves an automation's `--config` by walking up from the script's own directory and
+taking the first `deno.json` it finds — so for any fixture under this repo, that is *this* file,
+not the import map Tranquil seeds into `$ATOM_HOME/automations/`. The runner's own
+`deno/rpc.ts` imports `capnweb` as a bare specifier, so without the entry here every automation
+run inside this project fails at import time with:
+
+```
+error: Import "capnweb" not a dependency and not in import map
+```
+
+which fails the debugger suite and any suite that runs a fixture. Keep the version in sync with
+the seed in `tranquil-automations/lib/deno-config-seed.js`.
+
 ## Layout
 
 | Path | What it's for |

@@ -19,6 +19,7 @@ import { focusTreeviewKeepSelection } from "./suites/focus-treeview-keep-selecti
 import { focusBackgroundTab } from "./suites/focus-background-tab.ts";
 import { rpcWebviewInjection } from "./suites/rpc-webview-injection.ts";
 import { debuggerBreakpoints } from "./suites/debugger-breakpoints.ts";
+import { mainThreadPerf } from "./suites/main-thread-perf.ts";
 
 Deno.test("Tranquil UI smoke", async (t) => {
   const app = await launch();
@@ -52,6 +53,13 @@ Deno.test("Tranquil UI smoke", async (t) => {
         "tranquil-rpc injects trusted webviews only",
         () => rpcWebviewInjection(cdp),
       );
+      await t.step(
+        "Badges measure-then-place; Runs panel coalesces and streams intact",
+        () => mainThreadPerf(cdp),
+      );
+      // Last on purpose: this one PAUSES the app at a breakpoint and waits up to 45s for it.
+      // A paused Electron window is indistinguishable from a hung one, so anything that needs
+      // to report should already have reported by the time this step starts.
       await t.step(
         "Breakpoints bind to the right TypeScript line (ADR-0025)",
         () => debuggerBreakpoints(cdp),

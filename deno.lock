@@ -4,7 +4,8 @@
     "jsr:@std/assert@1": "1.0.19",
     "jsr:@std/internal@^1.0.12": "1.0.14",
     "jsr:@std/internal@^1.0.14": "1.0.14",
-    "jsr:@std/path@1": "1.1.5"
+    "jsr:@std/path@1": "1.1.5",
+    "npm:capnweb@0.9.0": "0.9.0"
   },
   "jsr": {
     "@std/assert@1.0.19": {
@@ -23,10 +24,16 @@
       ]
     }
   },
+  "npm": {
+    "capnweb@0.9.0": {
+      "integrity": "sha512-kZ0vg55E+gkuKHNHTXrizb5hMbD0IVCJ0lY/WHmcin7YiwvgG77RT3OTRW/zdS9rtBcjT8xGAF1TG35whR2cyA=="
+    }
+  },
   "workspace": {
     "dependencies": [
       "jsr:@std/assert@1",
-      "jsr:@std/path@1"
+      "jsr:@std/path@1",
+      "npm:capnweb@0.9.0"
     ]
   }
 }
