@@ -22,6 +22,7 @@ import { debuggerBreakpoints } from "./suites/debugger-breakpoints.ts";
 import { mainThreadPerf } from "./suites/main-thread-perf.ts";
 import { markdownPreviewToggle } from "./suites/markdown-preview-toggle.ts";
 import { treeViewEmptyProjectControls } from "./suites/tree-view-empty-project-controls.ts";
+import { browserToggleEmptyPane } from "./suites/browser-toggle-empty-pane.ts";
 
 Deno.test("Tranquil UI smoke", async (t) => {
   const app = await launch();
@@ -66,6 +67,10 @@ Deno.test("Tranquil UI smoke", async (t) => {
       await t.step(
         "Tree-view tab-bar buttons hide with no project open",
         () => treeViewEmptyProjectControls(cdp),
+      );
+      await t.step(
+        "BUG REPRO: browser toggle with a browser tab already open",
+        () => browserToggleEmptyPane(cdp),
       );
       // Last on purpose: this one PAUSES the app at a breakpoint and waits up to 45s for it.
       // A paused Electron window is indistinguishable from a hung one, so anything that needs
