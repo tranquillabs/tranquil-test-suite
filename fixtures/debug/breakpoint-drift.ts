@@ -35,9 +35,15 @@ const joined = ["a", "b", "c"]
 
 console.log("fixture done", built.name, joined); // BREAK_TOP
 
-// Never executed — a breakpoint here must stay unbound rather than silently binding elsewhere.
+// Never called — but its body is real, compiled code the script loads regardless of whether
+// it's ever invoked, so V8 legitimately binds and verifies a breakpoint inside it (confirmed
+// against a live session, see debugger-breakpoints.ts). Nor is a type-only or trailing-comment
+// line unbindable: both SourceMap.originalToGenerated and V8 itself snap forward to the nearest
+// mapping/instruction that DOES exist and bind there instead, dot and all — even the very last
+// comment in this file resolves that way. Only a request with no mapping ANYWHERE near it
+// (constructed directly in the test, well past this file's actual line count) stays unbound.
 function unreachable(): number {
-  return 1; // BREAK_UNREACHABLE
+  return 1;
 }
 
 export { unreachable };

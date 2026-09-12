@@ -29,7 +29,13 @@ export async function debuggerBreakpoints(cdp: Cdp): Promise<void> {
   const fixture = `${root}/fixtures/debug/breakpoint-drift.ts`;
   const source = await Deno.readTextFile(fixture);
   const insideRow = rowOfMarker(source, "BREAK_INSIDE");
-  const unreachableRow = rowOfMarker(source, "BREAK_UNREACHABLE");
+  // Deliberately far past the file's last line. Verified: false turns out to be hard to hit any
+  // other way — both our own SourceMap.originalToGenerated and V8 itself snap a request forward
+  // to the nearest mapping/instruction that DOES exist rather than refusing it, so a never-called
+  // function body, a type-only line, even the file's very last comment, all bind successfully
+  // (confirmed against a live session; see the fixture's own comment on `unreachable()`). Only a
+  // request with no mapping anywhere near it stays unbound.
+  const farAwayRow = source.split("\n").length + 1000;
 
   const reachable = await cdp.evalInAtom<boolean>(`!!${pkg}`);
   assert(reachable, "tranquil-debug main module not reachable");
@@ -39,7 +45,7 @@ export async function debuggerBreakpoints(cdp: Cdp): Promise<void> {
     const m = ${pkg};
     m.store.breakpoints.length = 0;
     m.store.toggle(${JSON.stringify(fixture)}, ${insideRow});
-    m.store.toggle(${JSON.stringify(fixture)}, ${unreachableRow});
+    m.store.toggle(${JSON.stringify(fixture)}, ${farAwayRow});
     return true;
   })()`);
   const count = await cdp.evalInAtom<number>(
@@ -120,17 +126,17 @@ export async function debuggerBreakpoints(cdp: Cdp): Promise<void> {
     `paused on TS row ${top.row}, expected ${insideRow} (source-map mapping is wrong)`,
   );
 
-  // The executed breakpoint bound; the one in dead code never did and must still say so.
+  // The executed breakpoint bound; the one with no nearby mapping never did and must still say so.
   const states = await cdp.evalInAtom<Record<string, boolean>>(`(() => {
     const bps = ${pkg}.store.forPath(${JSON.stringify(fixture)});
     const inside = bps.find((b) => b.requestedRow === ${insideRow});
-    const dead = bps.find((b) => b.requestedRow === ${unreachableRow});
-    return { insideVerified: !!inside.verified, deadVerified: !!dead.verified };
+    const farAway = bps.find((b) => b.requestedRow === ${farAwayRow});
+    return { insideVerified: !!inside.verified, farAwayVerified: !!farAway.verified };
   })()`);
   assert(states.insideVerified, "the reachable breakpoint should be bound");
   assert(
-    !states.deadVerified,
-    "a breakpoint in never-executed code must stay unbound",
+    !states.farAwayVerified,
+    "a breakpoint with no nearby source-map mapping must stay unbound",
   );
 
   // --- stopping a PAUSED session must actually reap the child ---------------

@@ -20,6 +20,8 @@ import { focusBackgroundTab } from "./suites/focus-background-tab.ts";
 import { rpcWebviewInjection } from "./suites/rpc-webview-injection.ts";
 import { debuggerBreakpoints } from "./suites/debugger-breakpoints.ts";
 import { mainThreadPerf } from "./suites/main-thread-perf.ts";
+import { markdownPreviewToggle } from "./suites/markdown-preview-toggle.ts";
+import { treeViewEmptyProjectControls } from "./suites/tree-view-empty-project-controls.ts";
 
 Deno.test("Tranquil UI smoke", async (t) => {
   const app = await launch();
@@ -56,6 +58,14 @@ Deno.test("Tranquil UI smoke", async (t) => {
       await t.step(
         "Badges measure-then-place; Runs panel coalesces and streams intact",
         () => mainThreadPerf(cdp),
+      );
+      await t.step(
+        "Markdown preview toggles in place, both directions",
+        () => markdownPreviewToggle(cdp),
+      );
+      await t.step(
+        "Tree-view tab-bar buttons hide with no project open",
+        () => treeViewEmptyProjectControls(cdp),
       );
       // Last on purpose: this one PAUSES the app at a breakpoint and waits up to 45s for it.
       // A paused Electron window is indistinguishable from a hung one, so anything that needs
