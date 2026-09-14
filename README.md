@@ -35,8 +35,7 @@ to `tranquil-business-dark`) and `--user-data-dir`, plus `TRANQUIL_VERIFY=1` so 
 opens as the project (never `tranquil-client`). It mirrors `tranquil-client`'s `scripts/verify.js`.
 
 Add a check: write a `smoke/suites/<name>.ts` exporting `async (cdp) => void`, then register a
-`t.step(...)` in `smoke/main_test.ts`. Full docs: **Development → Testing → Smoke Tests** in the
-Tranquil dev docs.
+`t.step(...)` in `smoke/main_test.ts`.
 
 ### `capnweb` in `deno.json`
 
