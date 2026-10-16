@@ -7,9 +7,8 @@
 import { fromFileUrl, join, resolve } from "@std/path";
 import { CDP_PORT, cdpAlive } from "./cdp.ts";
 
-const HERE = fromFileUrl(new URL(".", import.meta.url)); // smoke/lib/
-export const REPO_ROOT = resolve(HERE, "..", ".."); // tranquil-test-suite/
-const TRANQUIL_CLIENT = resolve(REPO_ROOT, "..", "tranquil-client");
+export const REPO_ROOT = resolve(fromFileUrl(import.meta.resolve("tranquil-test-suite/")));
+const TRANQUIL_CLIENT = resolve(fromFileUrl(import.meta.resolve("tranquil-client/")));
 const REAL_ATOM_HOME = join(
   Deno.env.get("HOME") ?? "",
   ".tranquil",
@@ -23,6 +22,10 @@ function exists(path: string): boolean {
     return false;
   }
 }
+
+// What the app needs from the environment it is launched from: a home, a PATH (the runner finds
+// Deno and the terminal its shell through it), the user, a temp folder and a locale.
+export const PASSED_ENV = ["HOME", "PATH", "USER", "LOGNAME", "SHELL", "TMPDIR", "LANG", "LC_ALL"];
 
 function electronBinary(): string {
   const electronDir = join(TRANQUIL_CLIENT, "node_modules", "electron");
@@ -41,7 +44,13 @@ function seedAtomHome(): string {
   );
   for (const name of ["dev", "packages"]) {
     const target = join(REAL_ATOM_HOME, name);
-    if (exists(target)) Deno.symlinkSync(target, join(home, name));
+    // `ln`, not Deno.symlinkSync: Deno grants symlinks only with unrestricted write access
+    // (a link can point anywhere), and this harness runs with write access to the temp folder
+    // only. `ln` is named in the task's --allow-run instead.
+    if (exists(target)) {
+      const ln = new Deno.Command("ln", { args: ["-s", target, join(home, name)] }).outputSync();
+      if (!ln.success) throw new Error(`could not link ${target}: ${new TextDecoder().decode(ln.stderr)}`);
+    }
   }
   return home;
 }
@@ -63,10 +72,15 @@ export async function launch(): Promise<IsolatedApp> {
   const userDataDir = Deno.makeTempDirSync({ prefix: "tranquil-smoke-udd-" });
   const io = Deno.env.get("SMOKE_DEBUG") ? "inherit" : "null";
 
-  // Full env minus ELECTRON_RUN_AS_NODE (which would make Electron run as node),
-  // plus our isolation vars. clearEnv makes `env` authoritative so the delete sticks.
-  const env = { ...Deno.env.toObject() };
-  delete env.ELECTRON_RUN_AS_NODE;
+  // A named list of variables from this environment, plus our isolation vars. clearEnv makes
+  // `env` the whole environment, so ELECTRON_RUN_AS_NODE (which would make Electron run as node)
+  // and anything else unlisted stays out, and the harness needs env access only to these names
+  // (the task's --allow-env).
+  const env: Record<string, string> = {};
+  for (const name of PASSED_ENV) {
+    const value = Deno.env.get(name);
+    if (value !== undefined) env[name] = value;
+  }
   env.ATOM_HOME = atomHome;
   env.ATOM_RESOURCE_PATH = TRANQUIL_CLIENT;
   env.NODE_PATH = join(TRANQUIL_CLIENT, "node_modules");

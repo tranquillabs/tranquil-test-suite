@@ -1,0 +1,64 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Fixture: selects and comboboxes</title>
+<style>
+  body { font: 14px/1.5 -apple-system, sans-serif; margin: 24px; display: grid; grid-template-columns: 1fr 360px; gap: 24px; }
+  label, .question-title { display: block; margin-top: 14px; }
+  select { font: inherit; padding: 6px; width: 100%; }
+  .error { color: #b3261e; font-size: 12px; }
+  #fixture-state { font: 11px/1.4 ui-monospace, monospace; white-space: pre-wrap; background: #f3f3f3; padding: 8px; max-height: 90vh; overflow: auto; }
+</style>
+</head>
+<body>
+<div id="root"></div>
+<pre id="fixture-state"></pre>
+<script type="module">
+import { AsyncSelect, Controller, createRoot, React, Select, useForm } from "./vendor/kit.js";
+import { installFixture, publishState } from "./harness.js";
+const h = React.createElement;
+
+const YES_NO = [{ value: "yes", label: "Yes" }, { value: "no", label: "No" }];
+const LANGUAGES = ["TypeScript", "Go", "Rust", "Python", "Java", "JavaScript"].map((l) => ({ value: l, label: l }));
+const CITIES = ["Lisbon", "London", "Los Angeles", "Berlin", "Boston"];
+// A debounced, asynchronous search like a location autocomplete backed by an API.
+const searchCities = (q) => new Promise((resolve) => setTimeout(() =>
+  resolve(CITIES.filter((c) => c.toLowerCase().startsWith(q.toLowerCase())).map((c) => ({ value: c, label: `${c}, Somewhere` }))), 400));
+
+function App() {
+  const { control, register, getValues, formState } = useForm({ mode: "onTouched" });
+  const { errors, touchedFields } = formState;
+  publishState(() => ({
+    values: Object.fromEntries(Object.entries(getValues()).map(([k, v]) => [k, Array.isArray(v) ? v.map((o) => o.label) : v && typeof v === "object" ? v.label : v])),
+    touched: Object.keys(touchedFields).sort(),
+    errors: Object.fromEntries(Object.entries(errors).map(([k, v]) => [k, v.message])),
+  }));
+  const rs = (name, label, props, rules) =>
+    h("div", { className: "field" },
+      h("label", { htmlFor: name, id: `${name}-label` }, label),
+      h(Controller, {
+        name, control, rules,
+        render: ({ field }) => h(props.async ? AsyncSelect : Select, {
+          ...field, ...props, inputId: name, classNamePrefix: "select", "aria-labelledby": `${name}-label`,
+        }),
+      }),
+      errors[name] ? h("div", { className: "error", role: "alert" }, errors[name].message) : null);
+
+  return h("form", { onSubmit: (e) => e.preventDefault(), noValidate: true },
+    h("label", { htmlFor: "country" }, "Country of residence"),
+    h("select", { id: "country", ...register("country", { required: "Required" }) },
+      h("option", { value: "" }, "Select..."),
+      ...["Portugal", "United Kingdom", "United States", "United Arab Emirates"].map((c) => h("option", { key: c, value: c }, c))),
+    rs("sponsorship", "Will you require sponsorship?", { options: YES_NO, isSearchable: false }, { required: "Required" }),
+    rs("language", "Favourite language", { options: LANGUAGES, isClearable: true }),
+    rs("skills", "Other skills", { options: LANGUAGES, isMulti: true }),
+    rs("city", "Where are you located?", { async: true, loadOptions: searchCities, cacheOptions: true }),
+  );
+}
+
+createRoot(document.getElementById("root")).render(h(App));
+installFixture();
+</script>
+</body>
+</html>

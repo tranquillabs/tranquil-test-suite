@@ -1,0 +1,17 @@
+<!doctype html>
+<html lang="en">
+<head><meta charset="utf-8"><title>Fixture: embedded form</title>
+<style>body { font: 14px -apple-system, sans-serif; margin: 24px; } iframe { width: 900px; height: 700px; border: 1px solid #ccc; }</style>
+</head>
+<body>
+<h1>Careers at Example</h1>
+<p>The application form below is served from another site (127.0.0.1), so it runs in a cross-origin frame.</p>
+<iframe id="embed" title="Application"></iframe>
+<script type="module">
+  import { installFixture } from "./harness.js";
+  installFixture();
+  // ?frame=http://127.0.0.1:PORT/forms/text.html
+  document.getElementById("embed").src = new URLSearchParams(location.search).get("frame");
+</script>
+</body>
+</html>

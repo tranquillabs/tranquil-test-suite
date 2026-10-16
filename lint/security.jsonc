@@ -1,0 +1,8 @@
+// Config for lint:security only: the Tranquil security plugin, and none of Deno's own rules
+// (each repo keeps its own style lint). See lint/security.ts.
+{
+  "lint": {
+    "plugins": ["./security.ts"],
+    "rules": { "tags": [] }
+  }
+}

@@ -1,0 +1,7 @@
+// Config for the types rule in lint:security: the tranquil-types plugin only. See lint/types.ts.
+{
+  "lint": {
+    "plugins": ["./types.ts"],
+    "rules": { "tags": [] }
+  }
+}

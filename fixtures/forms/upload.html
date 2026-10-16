@@ -1,0 +1,48 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Fixture: file uploads</title>
+<style>
+  body { font: 14px/1.5 -apple-system, sans-serif; margin: 24px; display: grid; grid-template-columns: 1fr 360px; gap: 24px; }
+  .autofill input { clip: rect(0 0 0 0); position: absolute; width: 1px; height: 1px; overflow: hidden; }
+  .styled input[type=file] { display: none; }
+  .styled button { padding: 6px 12px; }
+  #fixture-state { font: 11px/1.4 ui-monospace, monospace; white-space: pre-wrap; background: #f3f3f3; padding: 8px; }
+</style>
+</head>
+<body>
+<div id="root"></div>
+<pre id="fixture-state"></pre>
+<script type="module">
+import { createRoot, React } from "./vendor/kit.js";
+import { installFixture, publishState } from "./harness.js";
+const h = React.createElement;
+const { useState, useRef } = React;
+
+function App() {
+  const [autofill, setAutofill] = useState([]);
+  const [resume, setResume] = useState([]);
+  const [cover, setCover] = useState([]);
+  const names = (e) => Array.from(e.target.files).map((f) => `${f.name}:${f.size}`);
+  const coverInput = useRef(null);
+  publishState(() => ({ values: { autofill, resume, cover } }));
+  return h("form", null,
+    // The decoy comes first in the DOM, as on some application forms.
+    h("div", { className: "autofill" },
+      h("label", { htmlFor: "autofill" }, "Autofill from resume"),
+      h("input", { id: "autofill", type: "file", onChange: (e) => setAutofill(names(e)) })),
+    h("p", null,
+      h("label", { htmlFor: "resume" }, "Resume"),
+      h("input", { id: "resume", type: "file", required: true, onChange: (e) => setResume(names(e)) })),
+    h("div", { className: "styled entry" },
+      h("span", { className: "question-title" }, "Cover letter"),
+      h("input", { type: "file", ref: coverInput, onChange: (e) => setCover(names(e)) }),
+      h("button", { type: "button", onClick: () => coverInput.current.click() }, "Upload file")),
+  );
+}
+createRoot(document.getElementById("root")).render(h(App));
+installFixture();
+</script>
+</body>
+</html>

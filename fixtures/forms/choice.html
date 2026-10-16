@@ -1,0 +1,96 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Fixture: checkboxes, radios and Yes/No buttons</title>
+<style>
+  body { font: 14px/1.5 -apple-system, sans-serif; margin: 24px; display: grid; grid-template-columns: 1fr 360px; gap: 24px; }
+  fieldset, .entry { border: 1px solid #ddd; border-radius: 6px; padding: 10px; margin: 12px 0; }
+  .question-title { font-weight: 600; display: block; margin-bottom: 6px; }
+  /* Visually hidden inputs, as some application forms use: present and clickable only through their labels. */
+  .hidden-box { opacity: 0; position: absolute; width: 1px; height: 1px; }
+  .yesno button { padding: 6px 16px; border: 1px solid #999; background: #fff; border-radius: 4px; cursor: pointer; }
+  .yesno button._active_ { background: #2d7788; color: #fff; }
+  .yesno input { display: none; }
+  #fixture-state { font: 11px/1.4 ui-monospace, monospace; white-space: pre-wrap; background: #f3f3f3; padding: 8px; max-height: 90vh; overflow: auto; }
+</style>
+</head>
+<body>
+<div id="root"></div>
+<pre id="fixture-state"></pre>
+<script type="module">
+import { createRoot, React, useForm } from "./vendor/kit.js";
+import { installFixture, publishState } from "./harness.js";
+const h = React.createElement;
+const { useState } = React;
+
+// Some application forms render a Yes/No question as two buttons plus a hidden checkbox, with the
+// state kept in the framework.
+function YesNo({ name, value, onChange }) {
+  return h("div", { className: "yesno" },
+    ["Yes", "No"].map((label) =>
+      h("button", {
+        key: label, type: "button", "aria-pressed": String(value === label),
+        className: value === label ? "_active_" : "",
+        onClick: () => onChange(label),
+      }, label)),
+    h("input", { type: "checkbox", name, tabIndex: -1, checked: value === "Yes", readOnly: true }));
+}
+
+function App() {
+  const { register, getValues, formState } = useForm({ mode: "onTouched", defaultValues: { channels: [] } });
+  const { touchedFields } = formState;
+  const [authorized, setAuthorized] = useState(null);
+  const [relocate, setRelocate] = useState(null);
+  const [experience, setExperience] = useState(null);
+  const [notice, setNotice] = useState(null);
+  publishState(() => ({
+    values: { ...getValues(), authorized, relocate, experience, notice },
+    touched: Object.keys(touchedFields).sort(),
+  }));
+
+  return h("form", { onSubmit: (e) => e.preventDefault() },
+    h("fieldset", null,
+      h("legend", null, "Preferred work style"),
+      ...["Remote", "Hybrid", "On-site"].map((v) =>
+        h("label", { key: v, style: { display: "block" } }, h("input", { type: "radio", value: v, ...register("workStyle") }), " ", v))),
+
+    // Two questions whose radios share one name, as some ATSs render them.
+    h("div", { className: "entry" },
+      h("span", { className: "question-title" }, "Years of experience"),
+      ...["0-2", "3-5", "6+"].map((v, i) =>
+        h("div", { key: v },
+          h("input", { type: "radio", id: `exp${i}`, name: "answer", value: v, checked: experience === v, onChange: () => setExperience(v) }),
+          h("label", { htmlFor: `exp${i}` }, v)))),
+    h("div", { className: "entry" },
+      h("span", { className: "question-title" }, "Notice period"),
+      ...["Immediately", "One month"].map((v, i) =>
+        h("div", { key: v },
+          h("input", { type: "radio", id: `notice${i}`, name: "answer", value: v, checked: notice === v, onChange: () => setNotice(v) }),
+          h("label", { htmlFor: `notice${i}` }, v)))),
+
+    h("div", { className: "entry" },
+      h("span", { className: "question-title" }, "How did you hear about us?"),
+      ...["LinkedIn", "Referral", "Website"].map((v, i) =>
+        h("div", { key: v },
+          h("input", { type: "checkbox", className: "hidden-box", id: `ch${i}`, value: v, ...register("channels") }),
+          h("label", { htmlFor: `ch${i}` }, v)))),
+
+    h("div", { className: "entry" },
+      h("span", { className: "question-title" }, "Are you authorized to work in the US?"),
+      h(YesNo, { name: "authorized", value: authorized, onChange: setAuthorized })),
+    h("div", { className: "entry" },
+      h("span", { className: "question-title" }, "Willing to relocate?"),
+      h(YesNo, { name: "relocate", value: relocate, onChange: setRelocate })),
+
+    // Some server frameworks render a hidden twin before the real checkbox, under the same name.
+    h("input", { type: "hidden", name: "consent", value: "0" }),
+    h("label", null, h("input", { type: "checkbox", value: "1", ...register("consent") }), " I agree to the privacy policy"),
+  );
+}
+
+createRoot(document.getElementById("root")).render(h(App));
+installFixture();
+</script>
+</body>
+</html>

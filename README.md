@@ -37,35 +37,23 @@ opens as the project (never `tranquil-client`). It mirrors `tranquil-client`'s `
 Add a check: write a `smoke/suites/<name>.ts` exporting `async (cdp) => void`, then register a
 `t.step(...)` in `smoke/main_test.ts`.
 
-### `capnweb` in `deno.json`
-
-`deno.json`'s import map carries a `capnweb` entry that nothing in this repo imports directly. It
-is there for the **fixtures**, which the app runs as automations.
-
-Tranquil resolves an automation's `--config` by walking up from the script's own directory and
-taking the first `deno.json` it finds — so for any fixture under this repo, that is *this* file,
-not the import map Tranquil seeds into `$ATOM_HOME/automations/`. The runner's own
-`deno/rpc.ts` imports `capnweb` as a bare specifier, so without the entry here every automation
-run inside this project fails at import time with:
-
-```
-error: Import "capnweb" not a dependency and not in import map
-```
-
-which fails the debugger suite and any suite that runs a fixture. Keep the version in sync with
-the seed in `tranquil-automations/lib/deno-config-seed.js`.
+Fixtures the app runs as automations use Tranquil's own config (`$ATOM_HOME/automations/deno.json`),
+like every script: the runner never picks up this repo's `deno.json`.
 
 ## Layout
 
 | Path | What it's for |
 | --- | --- |
-| `fixtures/` | Tracked sample files/folders that give tree-view, tabs, and file-icons real content to render. The smoke suites open these. |
-| `smoke/` | Deno/TypeScript smoke tests: `main_test.ts` (runner), `lib/` (launch + CDP client), `suites/` (one file per feature), `atom-home/config.cson` (fixed config). |
-| `scratch/` | Ephemeral agent output — **git-ignored**. Anything the app writes during a verify run goes here so it never shows as a diff. |
+| `fixtures/` | Tracked sample files and folders that give the tree-view, tabs and file icons real content to render. The smoke suites open these. |
+| `smoke/` | Deno smoke tests: `main_test.ts` and `sdk_test.ts` (runners), `lib/` (launch and CDP client), `suites/` (one file per feature), `atom-home/config.cson` (fixed config). |
+| `conformance/` | WPT accessible-name conformance for the automation SDK, with its test data. |
+| `lint/` | The security lint (`deno task lint:security`). |
 
 ## Conventions
 
 - **Track** deliberate fixtures (representative files a test relies on).
-- **Never** commit `scratch/` — it's for throwaway run artifacts.
+- A suite that writes files makes its own temp folder and removes it; nothing is written into this
+  repo.
 - Keep fixtures small and representative; this repo is read while driving the UI, not built.
-- Assert on **your** fixtures as subsets — the app auto-opens some panes; don't assume an exact tab list.
+- Assert on **your** fixtures as subsets: the app opens some panes on its own, so don't assume an
+  exact tab list.

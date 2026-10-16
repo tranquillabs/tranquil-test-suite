@@ -1,0 +1,60 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Fixture: text fields (form library, validates on blur)</title>
+<style>
+  body { font: 14px/1.5 -apple-system, sans-serif; margin: 24px; display: grid; grid-template-columns: 1fr 360px; gap: 24px; }
+  label, .question-title { display: block; margin-top: 12px; }
+  input, textarea { font: inherit; padding: 6px; width: 100%; box-sizing: border-box; }
+  .error { color: #b3261e; font-size: 12px; }
+  #fixture-state { font: 11px/1.4 ui-monospace, monospace; white-space: pre-wrap; background: #f3f3f3; padding: 8px; max-height: 90vh; overflow: auto; }
+</style>
+</head>
+<body>
+<div id="root"></div>
+<pre id="fixture-state"></pre>
+<script type="module">
+import { createRoot, React, useForm } from "./vendor/kit.js";
+import { installFixture, publishState } from "./harness.js";
+const h = React.createElement;
+
+function Field({ id, label, error, children }) {
+  return h("div", { className: "field" },
+    h("label", { htmlFor: id }, label),
+    children,
+    error ? h("div", { className: "error", id: `${id}-error`, role: "alert" }, error.message) : null);
+}
+
+function App() {
+  const { register, getValues, formState } = useForm({ mode: "onTouched", defaultValues: { account: "A-1001" } });
+  const { errors, touchedFields } = formState; // read during render: subscribes to both
+  publishState(() => ({
+    values: getValues(),
+    touched: Object.keys(touchedFields).sort(),
+    errors: Object.fromEntries(Object.entries(errors).map(([k, v]) => [k, v.message])),
+  }));
+  const aria = (name) => ({ id: name, "aria-invalid": errors[name] ? "true" : "false", "aria-errormessage": `${name}-error` });
+  return h("form", { onSubmit: (e) => e.preventDefault(), noValidate: true },
+    h(Field, { id: "first", label: "First name *", error: errors.first },
+      h("input", { ...aria("first"), ...register("first", { required: "Required", minLength: { value: 2, message: "Too short" } }) })),
+    h(Field, { id: "email", label: "Email", error: errors.email },
+      h("input", { type: "email", ...aria("email"), ...register("email", { required: "Required", pattern: { value: /^[^@\s]+@[^@\s]+\.[^@\s]+$/, message: "Not an email" } }) })),
+    h(Field, { id: "phone", label: "Phone", error: errors.phone },
+      h("input", { type: "tel", ...aria("phone"), ...register("phone") })),
+    h(Field, { id: "bio", label: "About you", error: errors.bio },
+      h("textarea", { maxLength: 20, ...aria("bio"), ...register("bio") })),
+    h(Field, { id: "account", label: "Account ID" },
+      h("input", { readOnly: true, ...aria("account"), ...register("account") })),
+    h("div", { className: "question" },
+      h("div", { className: "question-title" }, "Where are you located?"),
+      h("input", { placeholder: "Start typing...", ...register("location") })),
+  );
+}
+
+const params = new URLSearchParams(location.search);
+const delay = Number(params.get("hydrateAfter") ?? 0); // ?hydrateAfter=1500 for the late-form case
+setTimeout(() => { createRoot(document.getElementById("root")).render(h(App)); installFixture(); }, delay);
+</script>
+</body>
+</html>

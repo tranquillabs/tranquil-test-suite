@@ -1,0 +1,7 @@
+// Config for the path rule in lint:security: the tranquil-paths plugin only. See lint/paths.ts.
+{
+  "lint": {
+    "plugins": ["./paths.ts"],
+    "rules": { "tags": [] }
+  }
+}

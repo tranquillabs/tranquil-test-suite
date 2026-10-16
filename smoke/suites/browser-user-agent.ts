@@ -21,7 +21,7 @@ export async function browserUserAgent(cdp: Cdp): Promise<void> {
   // Local echo server: every response body is the request's User-Agent header, so
   // a browser tab pointed at it reveals exactly what the guest put on the wire.
   const server = Deno.serve(
-    { port: 0, onListen() {} },
+    { hostname: "127.0.0.1", port: 0, onListen() {} }, // this machine only, never the network
     (req) =>
       new Response(req.headers.get("user-agent") ?? "", {
         headers: { "content-type": "text/plain" },

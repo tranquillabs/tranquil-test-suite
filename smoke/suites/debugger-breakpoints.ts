@@ -75,37 +75,42 @@ export async function debuggerBreakpoints(cdp: Cdp): Promise<void> {
   await cdp.evalInAtom(
     `atom.workspace.open(${JSON.stringify(fixture)}).then(() => true)`,
   );
-  const painted = await cdp.waitFor<
-    { dots: number; width: number; visible: boolean }
-  >(
+  // The editor draws only the rows in view, and earlier suites can leave a dock open that makes
+  // it shorter than the file. So check each breakpoint on its own row, scrolled into view: the dot
+  // must sit level with that row's line number. The far-away breakpoint is drawn on the last row.
+  const dotOnRow = (row: string) =>
     `(() => {
-      const node = document.querySelector('[gutter-name="tranquil-breakpoints"]');
-      if (!node) return null;
-      const dots = node.querySelectorAll(".decoration.tranquil-bp");
-      if (!dots.length) return null;
-      const cs = getComputedStyle(dots[0], "::before");
+      const ed = atom.workspace.getTextEditors().find((e) => e.getPath() === ${JSON.stringify(fixture)});
+      if (!ed) return null;
+      const r = ${row};
+      ed.scrollToBufferPosition([r, 0], { center: true });
+      const node = ed.element.querySelector('[gutter-name="tranquil-breakpoints"]');
+      const lineNumber = ed.element.querySelector('.line-number[data-buffer-row="' + r + '"]');
+      if (!node || !lineNumber) return null;
+      const top = lineNumber.getBoundingClientRect().top;
+      const dot = [...node.querySelectorAll(".decoration.tranquil-bp")]
+        .find((d) => Math.abs(d.getBoundingClientRect().top - top) < 3);
+      if (!dot) return null;
+      const cs = getComputedStyle(dot, "::before");
       return {
-        dots: dots.length,
         width: Math.round(node.getBoundingClientRect().width),
         // A transparent dot is the exact failure mode this guards: present in the DOM, unpaintable.
         visible: cs.backgroundColor !== "rgba(0, 0, 0, 0)" || cs.borderTopWidth !== "0px",
       };
-    })()`,
-    { timeout: 10000 },
-  );
-  assert(
-    painted.width > 0,
-    "the breakpoint gutter should occupy width on screen",
-  );
-  assertEquals(
-    painted.dots,
-    2,
-    "both breakpoints should render as gutter decorations",
-  );
-  assert(
-    painted.visible,
-    "the breakpoint dot must be painted, not just present in the DOM",
-  );
+    })()`;
+  for (
+    const [label, row] of [
+      ["the breakpoint inside the function", String(insideRow)],
+      ["the far-away breakpoint, on the last row", "ed.getLastBufferRow()"],
+    ]
+  ) {
+    const painted = await cdp
+      .waitFor<{ width: number; visible: boolean }>(dotOnRow(row), { timeout: 10000 })
+      .catch(() => null);
+    assert(painted, `${label} should render as a gutter dot on its row`);
+    assert(painted.width > 0, "the breakpoint gutter should occupy width on screen");
+    assert(painted.visible, "the breakpoint dot must be painted, not just present in the DOM");
+  }
 
   // --- start a debug session and stop on the right line ---------------------
   await cdp.evalInAtom(`${pkg}.startDebug(${JSON.stringify(fixture)}) && true`);

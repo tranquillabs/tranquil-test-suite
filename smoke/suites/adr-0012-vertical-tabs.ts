@@ -49,6 +49,11 @@ export async function adr0012(cdp: Cdp): Promise<void> {
   assert(inRightDock, "vertical-tabs pane item should be in the right dock");
 
   // 4. Rows mirror the fixtures with correct octicons + close buttons.
+  //    The panel can appear a frame before its rows, so wait for both fixtures' rows.
+  await cdp.waitFor(`(() => {
+    const rows = ${readRows};
+    return rows.some((r) => r.text.includes("welcome.md")) && rows.some((r) => r.text.includes("sample.json"));
+  })()`);
   const rows = await cdp.evalInAtom<Row[]>(readRows);
   const welcome = rows.find((r) => r.text.includes("welcome.md"));
   const sample = rows.find((r) => r.text.includes("sample.json"));

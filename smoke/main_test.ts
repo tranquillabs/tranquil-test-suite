@@ -13,6 +13,7 @@ import { adr0012 } from "./suites/adr-0012-vertical-tabs.ts";
 import { adr0013 } from "./suites/adr-0013-ui-variables.ts";
 import { settingsTab } from "./suites/settings-default-tab.ts";
 import { browserUserAgent } from "./suites/browser-user-agent.ts";
+import { browserZoom } from "./suites/browser-zoom.ts";
 import { urlBookmarkSave } from "./suites/url-bookmark-save.ts";
 import { focusCtrlTabCenter } from "./suites/focus-ctrl-tab-center.ts";
 import { focusTreeviewKeepSelection } from "./suites/focus-treeview-keep-selection.ts";
@@ -23,6 +24,11 @@ import { mainThreadPerf } from "./suites/main-thread-perf.ts";
 import { markdownPreviewToggle } from "./suites/markdown-preview-toggle.ts";
 import { treeViewEmptyProjectControls } from "./suites/tree-view-empty-project-controls.ts";
 import { browserToggleEmptyPane } from "./suites/browser-toggle-empty-pane.ts";
+import { sdkFormsText } from "./suites/sdk-forms-text.ts";
+import { sdkFormsMore } from "./suites/sdk-forms-more.ts";
+import { sdkPermissions } from "./suites/sdk-permissions.ts";
+import { sdkGuards } from "./suites/sdk-guards.ts";
+import { sdkCustomParts } from "./suites/sdk-custom-parts.ts";
 
 Deno.test("Tranquil UI smoke", async (t) => {
   const app = await launch();
@@ -35,6 +41,10 @@ Deno.test("Tranquil UI smoke", async (t) => {
       await t.step(
         "Configurable browser User-Agent (ADR-0019)",
         () => browserUserAgent(cdp),
+      );
+      await t.step(
+        "Browser zoom on the font-size commands, editor font size untouched",
+        () => browserZoom(cdp),
       );
       await t.step(
         "Save browser tab as .url bookmark",
@@ -78,6 +88,26 @@ Deno.test("Tranquil UI smoke", async (t) => {
       await t.step(
         "Breakpoints bind to the right TypeScript line (ADR-0025)",
         () => debuggerBreakpoints(cdp),
+      );
+      await t.step(
+        "Automation SDK: fields() and text fill() on a form-library page",
+        () => sdkFormsText(cdp),
+      );
+      await t.step(
+        "Automation SDK: selects, choices, uploads, frames, lifecycle",
+        () => sdkFormsMore(cdp),
+      );
+      await t.step(
+        "Automation SDK: tabs / forms / page-js grants are enforced",
+        () => sdkPermissions(cdp),
+      );
+      await t.step(
+        "Automation SDK: guard rails (submit, sites, reading, confirm, action log, parts check)",
+        () => sdkGuards(cdp),
+      );
+      await t.step(
+        "Automation SDK: custom parts maps, Check Custom Parts, Map Custom Parts",
+        () => sdkCustomParts(cdp),
       );
     } finally {
       cdp.close();

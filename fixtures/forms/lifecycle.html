@@ -1,0 +1,26 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Fixture: overlays and re-renders</title>
+<style>
+  body { font: 14px/1.5 -apple-system, sans-serif; margin: 24px; }
+  label { display: block; margin-top: 12px; }
+  #banner { position: fixed; inset: 0; background: rgba(20, 20, 20, 0.92); color: #fff; padding: 24px; }
+</style>
+</head>
+<body>
+<label for="covered">Under the banner</label><input id="covered">
+<div style="height: 40px"></div>
+<button type="button" id="later" onclick="this.textContent = 'Clicked'">Not yet clicked</button>
+<label for="swap">Re-rendered field</label><span id="swap-slot"><input id="swap"></span>
+<div id="banner">Cookie banner covering the page. <button type="button" id="accept" onclick="document.getElementById('banner').remove()">Accept</button></div>
+<script type="module">
+import { installFixture, publishState } from "./harness.js";
+publishState(() => ({ values: { covered: document.getElementById("covered").value, later: document.getElementById("later").textContent } }));
+installFixture();
+// Replace the input node (as a framework re-render would) when asked.
+window.__swap = () => { document.getElementById("swap-slot").innerHTML = '<input id="swap">'; return true; };
+</script>
+</body>
+</html>

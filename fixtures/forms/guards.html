@@ -1,0 +1,37 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Fixture: guard rails (submit, sites, reading)</title>
+<style>
+  body { font: 14px/1.5 -apple-system, sans-serif; margin: 24px; display: grid; grid-template-columns: 1fr 360px; gap: 24px; }
+  label { display: block; margin-top: 12px; }
+  input { font: inherit; padding: 6px; width: 100%; box-sizing: border-box; }
+  #fixture-state { font: 11px/1.4 ui-monospace, monospace; white-space: pre-wrap; background: #f3f3f3; padding: 8px; }
+</style>
+</head>
+<body>
+<main>
+  <!-- A plain HTML form: a submission is real here (prevented only to stay on the page), so a
+       stopped submission shows as submitted: 0 in the state. -->
+  <form id="apply" action="/never">
+    <label for="name">Name</label>
+    <input id="name" name="name">
+    <p><button>Continue</button> <button type="button">Submit application</button></p>
+  </form>
+  <div role="status">Ready to <b>apply</b></div>
+  <a href="/forms/receipt.pdf">Download receipt</a>
+</main>
+<pre id="fixture-state"></pre>
+<script type="module">
+import { installFixture, publishState } from "./harness.js";
+let submitted = 0;
+document.getElementById("apply").addEventListener("submit", (e) => {
+  e.preventDefault(); // stay on the page; the count is what the tests read
+  submitted++;
+});
+publishState(() => ({ submitted, name: document.getElementById("name").value }));
+installFixture();
+</script>
+</body>
+</html>

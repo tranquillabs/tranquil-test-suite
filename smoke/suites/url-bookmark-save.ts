@@ -17,7 +17,11 @@ const FIXTURE_TITLE = "Tranquil test fixture";
 export async function urlBookmarkSave(cdp: Cdp): Promise<void> {
   const root = await cdp.evalInAtom<string>(`atom.project.getPaths()[0]`);
   const fixtureUrl = `file://${root}/fixtures/index.html`;
-  const scratchDir = `${root}/scratch`; // git-ignored — nothing written here dirties the repo
+  // A fresh temp folder, made by the app (which writes the bookmarks) and removed at the end, so the
+  // suite needs no folder in the repo and leaves nothing behind.
+  const scratchDir = await cdp.evalInAtom<string>(
+    `require('fs').mkdtempSync(require('path').join(require('os').tmpdir(), 'tranquil-bookmark-'))`,
+  );
   const expected = `${scratchDir}/${FIXTURE_TITLE}.url`;
   const messyExpected = `${scratchDir}/A- B - C - D.url`;
 
@@ -45,8 +49,7 @@ export async function urlBookmarkSave(cdp: Cdp): Promise<void> {
       && wv.getTitle().trim() === ${JSON.stringify(FIXTURE_TITLE)};
   })()`);
 
-  // 2. Aim the tree-view save target at scratch/ (so the bookmark lands in the
-  //    git-ignored folder), then click the REAL toolbar save button.
+  // 2. Aim the tree-view save target at the temp folder, then click the REAL toolbar save button.
   await cdp.evalInAtom(`(() => {
     const tb = atom.packages.getActivePackage('tranquil-browser').mainModule;
     tb.__origTreeView = tb.treeView;
@@ -131,11 +134,7 @@ export async function urlBookmarkSave(cdp: Cdp): Promise<void> {
     const fs = require('fs');
     const tb = atom.packages.getActivePackage('tranquil-browser').mainModule;
     if (tb.__origTreeView !== undefined) { tb.treeView = tb.__origTreeView; delete tb.__origTreeView; }
-    for (const p of [${JSON.stringify(expected)}, ${
-    JSON.stringify(messyExpected)
-  }]) {
-      try { fs.unlinkSync(p); } catch (e) { /* absent */ }
-    }
+    fs.rmSync(${JSON.stringify(scratchDir)}, { recursive: true, force: true });
     const item = atom.workspace.getPaneItems().find(
       (i) => i.getURL && i.getURL() === ${JSON.stringify(fixtureUrl)},
     );

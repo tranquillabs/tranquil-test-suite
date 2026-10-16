@@ -1,17 +1,33 @@
 {
   "version": "0.1.0",
   "tasks": {
-    "test": "deno test -A smoke/main_test.ts"
+    "test": "deno test --allow-read=..,$TMPDIR,$HOME/.tranquil --allow-write=$TMPDIR --allow-run=../tranquil-client/node_modules/electron/dist/Electron.app/Contents/MacOS/Electron,pgrep,ln --allow-net=localhost,127.0.0.1 --allow-env=HOME,PATH,USER,LOGNAME,SHELL,TMPDIR,LANG,LC_ALL,TRANQUIL_TEST_CDP_PORT,SMOKE_DEBUG,SMOKE_DEBUG_SDK smoke/main_test.ts",
+    "test:sdk": "deno test --allow-read=..,$TMPDIR,$HOME/.tranquil --allow-write=$TMPDIR --allow-run=../tranquil-client/node_modules/electron/dist/Electron.app/Contents/MacOS/Electron,pgrep,ln --allow-net=localhost,127.0.0.1 --allow-env=HOME,PATH,USER,LOGNAME,SHELL,TMPDIR,LANG,LC_ALL,TRANQUIL_TEST_CDP_PORT,SMOKE_DEBUG,SMOKE_DEBUG_SDK smoke/sdk_test.ts",
+    "serve:fixtures": "deno run --allow-net=localhost,127.0.0.1 --allow-read=fixtures smoke/lib/fixture-server.ts",
+    "vendor:forms": "deno bundle --platform browser --minify fixtures/forms/kit/kit.ts -o fixtures/forms/vendor/kit.js",
+    "lint:security": "deno run --allow-read=.. --allow-run=deno lint/run-security.ts && deno test --allow-read=..,$TMPDIR --allow-write=$TMPDIR --allow-run=ln lint/",
+    "test:conformance": "deno test --allow-read=conformance/testdata conformance/"
   },
   "imports": {
     "@std/assert": "jsr:@std/assert@^1",
     "@std/path": "jsr:@std/path@^1",
-    "capnweb": "npm:capnweb@0.9.0"
+    "@std/http": "jsr:@std/http@^1",
+    "tranquil-test-suite/": "./",
+    "tranquil-automations/": "../tranquil-automations/",
+    "tranquil-browser/": "../tranquil-browser/",
+    "tranquil-client/": "../tranquil-client/",
+    "tranquil-repos/": "../",
+    "tranquil/automation": "../tranquil-automations/deno/mod.ts",
+    "tranquil/automation/testing": "../tranquil-automations/deno/testing.ts"
   },
   "fmt": {
-    "include": ["smoke/"]
+    "include": [
+      "smoke/"
+    ]
   },
   "lint": {
-    "include": ["smoke/"]
+    "include": [
+      "smoke/"
+    ]
   }
 }
