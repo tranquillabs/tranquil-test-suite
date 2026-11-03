@@ -12,36 +12,26 @@
 </style>
 </head>
 <body>
-<div id="root"></div>
+<div id="root">
+<form>
+  <!-- The decoy comes first in the DOM, as on some application forms. -->
+  <div class="autofill"><label for="autofill">Autofill from resume</label><input id="autofill" type="file"></div>
+  <p><label for="resume">Resume</label><input id="resume" type="file" required></p>
+  <div class="styled entry"><span class="question-title">Cover letter</span><input type="file"><button type="button">Upload file</button></div>
+</form>
+</div>
 <pre id="fixture-state"></pre>
 <script type="module">
-import { createRoot, React } from "./vendor/kit.js";
+import { watchChanges } from "./form.js";
 import { installFixture, publishState } from "./harness.js";
-const h = React.createElement;
-const { useState, useRef } = React;
 
-function App() {
-  const [autofill, setAutofill] = useState([]);
-  const [resume, setResume] = useState([]);
-  const [cover, setCover] = useState([]);
-  const names = (e) => Array.from(e.target.files).map((f) => `${f.name}:${f.size}`);
-  const coverInput = useRef(null);
-  publishState(() => ({ values: { autofill, resume, cover } }));
-  return h("form", null,
-    // The decoy comes first in the DOM, as on some application forms.
-    h("div", { className: "autofill" },
-      h("label", { htmlFor: "autofill" }, "Autofill from resume"),
-      h("input", { id: "autofill", type: "file", onChange: (e) => setAutofill(names(e)) })),
-    h("p", null,
-      h("label", { htmlFor: "resume" }, "Resume"),
-      h("input", { id: "resume", type: "file", required: true, onChange: (e) => setResume(names(e)) })),
-    h("div", { className: "styled entry" },
-      h("span", { className: "question-title" }, "Cover letter"),
-      h("input", { type: "file", ref: coverInput, onChange: (e) => setCover(names(e)) }),
-      h("button", { type: "button", onClick: () => coverInput.current.click() }, "Upload file")),
-  );
-}
-createRoot(document.getElementById("root")).render(h(App));
+const [autofill, resume, cover] = document.querySelectorAll("input[type=file]");
+const values = { autofill: [], resume: [], cover: [] };
+const names = (input) => Array.from(input.files).map((f) => `${f.name}:${f.size}`);
+for (const [key, input] of Object.entries({ autofill, resume, cover })) watchChanges(input, () => (values[key] = names(input)));
+document.querySelector(".styled button").addEventListener("click", () => cover.click());
+
+publishState(() => ({ values: { ...values } }));
 installFixture();
 </script>
 </body>
