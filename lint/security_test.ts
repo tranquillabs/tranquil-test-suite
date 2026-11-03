@@ -48,6 +48,16 @@ Deno.test("no-insecure-webpreferences", () => {
   assertEquals(ids(`new BrowserWindow({ webPreferences: { sandbox: true, contextIsolation: true, nodeIntegration: false } });`), []);
 });
 
+Deno.test("no-markdown-html", () => {
+  const rule = "tranquil-security/no-markdown-html";
+  assertEquals(ids(`atom.ui.markdown.render(text);`), [rule]);
+  assertEquals(ids(`atom.ui.markdown.render(text, { sanitize: true });`), [rule]);
+  assertEquals(ids(`atom.ui.markdown.render(text, { html: true });`), [rule]);
+  assertEquals(ids(`atom.ui.markdown.render(text, opts);`), [rule]); // not visible to the lint
+  assertEquals(ids(`atom.ui.markdown.render(text, { html: false, sanitize: true });`), []);
+  assertEquals(ids(`template.render(text);`), []); // some other render
+});
+
 Deno.test("no-unbound-server", () => {
   const rule = "tranquil-security/no-unbound-server";
   assertEquals(ids(`Deno.serve({ port: 0 }, () => new Response(""));`), [rule]);

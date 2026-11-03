@@ -165,6 +165,32 @@ const plugin: Deno.lint.Plugin = {
       },
     },
 
+    // Pulsar's Markdown renderer keeps raw HTML by default, and its sanitizer runs on defaults
+    // that let <style>, <img> and <form> through (src/ui.js). Text in this window can come from
+    // web pages or an LLM, so every owned call must turn raw HTML off, as a literal the lint can
+    // see, and harden the result (tranquil-automations lib/safe-markdown.js).
+    "no-markdown-html": {
+      create(ctx) {
+        return {
+          CallExpression(node: Deno.lint.CallExpression) {
+            const callee = node.callee;
+            if (memberName(callee) !== "render" || callee.type !== "MemberExpression") return;
+            if (memberName(callee.object) !== "markdown") return;
+            const opts = node.arguments[1];
+            const htmlOff = opts?.type === "ObjectExpression" &&
+              opts.properties.some((p) => p.type === "Property" && keyName(p.key) === "html" && isOff(p.value));
+            if (!htmlOff) {
+              ctx.report({
+                node,
+                message: "markdown.render keeps raw HTML unless told otherwise. Pass { html: false } as a " +
+                  "literal, then harden the result (lib/safe-markdown.js).",
+              });
+            }
+          },
+        };
+      },
+    },
+
     // A Deno server with no hostname listens on every network interface (0.0.0.0), so anyone on
     // the network can reach it. Name the interface: 127.0.0.1 for anything local.
     "no-unbound-server": {
