@@ -1,5 +1,5 @@
-// ADR-0026 checkpoint 3: the rest of the form verbs against a real form library,
-// a third-party dropdown widget (sync, async, multi) and job-application-style widgets. Asserts each page's framework
+// ADR-0026 checkpoint 3: the rest of the form verbs against the fixture form library, a dropdown
+// modelled on react-select (sync, async, multi) and job-application-style widgets. Asserts each page's framework
 // state, plus the error codes the lifecycle page is built to produce.
 import { assert, assertEquals, assertMatch } from "@std/assert";
 import type { Cdp } from "../lib/cdp.ts";

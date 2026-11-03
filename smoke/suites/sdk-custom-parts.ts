@@ -1,6 +1,7 @@
 // Custom parts maps (ADR-0026), through the real runner, on a form whose dropdowns keep their
-// choice, open control and clear button where web standards don't say (the select fixture page;
-// its widget is third-party, so this lives here rather than in the SDK's own tests):
+// choice, open control and clear button where web standards don't say (the select fixture page,
+// whose dropdowns are modelled on react-select; it needs the app and the runner, so this lives here
+// rather than in the SDK's own tests):
 //   - without a map, a fill can't see what it chose, and its error says how to fix that;
 //   - with a hand-written map, from the author's own module, the default verbs fill the form;
 //   - SDK: Check Custom Parts reports each verb's parts, and the missing ones with markup;

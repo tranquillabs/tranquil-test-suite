@@ -3,6 +3,7 @@
 <head>
 <meta charset="utf-8">
 <title>Fixture: selects and comboboxes</title>
+<link rel="stylesheet" href="./dropdown.css">
 <style>
   body { font: 14px/1.5 -apple-system, sans-serif; margin: 24px; display: grid; grid-template-columns: 1fr 360px; gap: 24px; }
   label, .question-title { display: block; margin-top: 14px; }
@@ -12,52 +13,62 @@
 </style>
 </head>
 <body>
-<div id="root"></div>
+<div id="root">
+<form novalidate>
+  <label for="country">Country of residence</label>
+  <select id="country" name="country">
+    <option value="">Select...</option>
+    <option value="Portugal">Portugal</option>
+    <option value="United Kingdom">United Kingdom</option>
+    <option value="United States">United States</option>
+    <option value="United Arab Emirates">United Arab Emirates</option>
+  </select>
+  <div class="field"><label for="sponsorship" id="sponsorship-label">Will you require sponsorship?</label></div>
+  <div class="field"><label for="language" id="language-label">Favourite language</label></div>
+  <div class="field"><label for="skills" id="skills-label">Other skills</label></div>
+  <div class="field"><label for="city" id="city-label">Where are you located?</label></div>
+</form>
+</div>
 <pre id="fixture-state"></pre>
 <script type="module">
-import { AsyncSelect, Controller, createRoot, React, Select, useForm } from "./vendor/kit.js";
+import { dropdown } from "./dropdown.js";
+import { createForm, errorSlot } from "./form.js";
 import { installFixture, publishState } from "./harness.js";
-const h = React.createElement;
 
 const YES_NO = [{ value: "yes", label: "Yes" }, { value: "no", label: "No" }];
 const LANGUAGES = ["TypeScript", "Go", "Rust", "Python", "Java", "JavaScript"].map((l) => ({ value: l, label: l }));
 const CITIES = ["Lisbon", "London", "Los Angeles", "Berlin", "Boston"];
-// A debounced, asynchronous search like a location autocomplete backed by an API.
-const searchCities = (q) => new Promise((resolve) => setTimeout(() =>
-  resolve(CITIES.filter((c) => c.toLowerCase().startsWith(q.toLowerCase())).map((c) => ({ value: c, label: `${c}, Somewhere` }))), 400));
-
-function App() {
-  const { control, register, getValues, formState } = useForm({ mode: "onTouched" });
-  const { errors, touchedFields } = formState;
-  publishState(() => ({
-    values: Object.fromEntries(Object.entries(getValues()).map(([k, v]) => [k, Array.isArray(v) ? v.map((o) => o.label) : v && typeof v === "object" ? v.label : v])),
-    touched: Object.keys(touchedFields).sort(),
-    errors: Object.fromEntries(Object.entries(errors).map(([k, v]) => [k, v.message])),
-  }));
-  const rs = (name, label, props, rules) =>
-    h("div", { className: "field" },
-      h("label", { htmlFor: name, id: `${name}-label` }, label),
-      h(Controller, {
-        name, control, rules,
-        render: ({ field }) => h(props.async ? AsyncSelect : Select, {
-          ...field, ...props, inputId: name, classNamePrefix: "select", "aria-labelledby": `${name}-label`,
-        }),
-      }),
-      errors[name] ? h("div", { className: "error", role: "alert" }, errors[name].message) : null);
-
-  return h("form", { onSubmit: (e) => e.preventDefault(), noValidate: true },
-    h("label", { htmlFor: "country" }, "Country of residence"),
-    h("select", { id: "country", ...register("country", { required: "Required" }) },
-      h("option", { value: "" }, "Select..."),
-      ...["Portugal", "United Kingdom", "United States", "United Arab Emirates"].map((c) => h("option", { key: c, value: c }, c))),
-    rs("sponsorship", "Will you require sponsorship?", { options: YES_NO, isSearchable: false }, { required: "Required" }),
-    rs("language", "Favourite language", { options: LANGUAGES, isClearable: true }),
-    rs("skills", "Other skills", { options: LANGUAGES, isMulti: true }),
-    rs("city", "Where are you located?", { async: true, loadOptions: searchCities, cacheOptions: true }),
+// A slow, asynchronous search like a location autocomplete backed by an API.
+const searchCities = (q) =>
+  new Promise((resolve) =>
+    setTimeout(() =>
+      resolve(CITIES.filter((c) => c.toLowerCase().startsWith(q.toLowerCase())).map((c) => ({ value: c, label: `${c}, Somewhere` }))), 400)
   );
+
+const DROPDOWNS = {
+  sponsorship: [{ options: YES_NO, isSearchable: false }, { required: "Required" }],
+  language: [{ options: LANGUAGES, isClearable: true }],
+  skills: [{ options: LANGUAGES, isMulti: true }],
+  city: [{ loadOptions: searchCities, cacheOptions: true }],
+};
+
+document.querySelector("form").addEventListener("submit", (e) => e.preventDefault());
+const shows = [];
+const form = createForm({ onUpdate: () => shows.forEach((show) => show()) });
+form.register("country", document.getElementById("country"), { required: "Required" });
+for (const [name, [props, rules]] of Object.entries(DROPDOWNS)) {
+  const field = form.control(name, rules);
+  const box = dropdown({ ...props, name, inputId: name, labelledBy: `${name}-label`, onChange: field.onChange, onBlur: field.onBlur });
+  document.getElementById(`${name}-label`).after(box);
+  const slot = errorSlot(box);
+  shows.push(() => slot(form.errorOf(name)));
 }
 
-createRoot(document.getElementById("root")).render(h(App));
+const shown = (v) => Array.isArray(v) ? v.map((o) => o.label) : v && typeof v === "object" ? v.label : v;
+publishState(() => {
+  const { values, touched, errors } = form.state();
+  return { values: Object.fromEntries(Object.entries(values).map(([k, v]) => [k, shown(v)])), touched, errors };
+});
 installFixture();
 </script>
 </body>

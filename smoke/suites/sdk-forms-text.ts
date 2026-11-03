@@ -1,5 +1,6 @@
-// ADR-0026 checkpoint 2: `fields()` and text `fill()` against a real form library
-// that validates on blur. Asserts the form library's own state (values, touched fields, errors) and the
+// ADR-0026 checkpoint 2: `fields()` and text `fill()` against a form library that keeps its own
+// state as React form libraries do and validates on blur (fixtures/forms/form.js). Asserts the
+// form library's own state (values, touched fields, errors) and the
 // isTrusted flag of each event, never the SDK's own report.
 import { assert, assertEquals, assertMatch } from "@std/assert";
 import type { Cdp } from "../lib/cdp.ts";

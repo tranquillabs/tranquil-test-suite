@@ -14,47 +14,48 @@
 <body>
 <div id="root"></div>
 <pre id="fixture-state"></pre>
+<template id="form">
+<form novalidate>
+  <div class="field"><label for="first">First name *</label><input id="first" name="first" aria-invalid="false" aria-errormessage="first-error"></div>
+  <div class="field"><label for="email">Email</label><input type="email" id="email" name="email" aria-invalid="false" aria-errormessage="email-error"></div>
+  <div class="field"><label for="phone">Phone</label><input type="tel" id="phone" name="phone" aria-invalid="false" aria-errormessage="phone-error"></div>
+  <div class="field"><label for="bio">About you</label><textarea maxlength="20" id="bio" name="bio" aria-invalid="false" aria-errormessage="bio-error"></textarea></div>
+  <div class="field"><label for="account">Account ID</label><input readonly id="account" name="account" aria-invalid="false" aria-errormessage="account-error"></div>
+  <div class="question"><div class="question-title">Where are you located?</div><input placeholder="Start typing..." name="location"></div>
+</form>
+</template>
 <script type="module">
-import { createRoot, React, useForm } from "./vendor/kit.js";
+import { createForm, errorSlot } from "./form.js";
 import { installFixture, publishState } from "./harness.js";
-const h = React.createElement;
 
-function Field({ id, label, error, children }) {
-  return h("div", { className: "field" },
-    h("label", { htmlFor: id }, label),
-    children,
-    error ? h("div", { className: "error", id: `${id}-error`, role: "alert" }, error.message) : null);
-}
+const RULES = {
+  first: { required: "Required", minLength: { value: 2, message: "Too short" } },
+  email: { required: "Required", pattern: { value: /^[^@\s]+@[^@\s]+\.[^@\s]+$/, message: "Not an email" } },
+};
 
-function App() {
-  const { register, getValues, formState } = useForm({ mode: "onTouched", defaultValues: { account: "A-1001" } });
-  const { errors, touchedFields } = formState; // read during render: subscribes to both
-  publishState(() => ({
-    values: getValues(),
-    touched: Object.keys(touchedFields).sort(),
-    errors: Object.fromEntries(Object.entries(errors).map(([k, v]) => [k, v.message])),
-  }));
-  const aria = (name) => ({ id: name, "aria-invalid": errors[name] ? "true" : "false", "aria-errormessage": `${name}-error` });
-  return h("form", { onSubmit: (e) => e.preventDefault(), noValidate: true },
-    h(Field, { id: "first", label: "First name *", error: errors.first },
-      h("input", { ...aria("first"), ...register("first", { required: "Required", minLength: { value: 2, message: "Too short" } }) })),
-    h(Field, { id: "email", label: "Email", error: errors.email },
-      h("input", { type: "email", ...aria("email"), ...register("email", { required: "Required", pattern: { value: /^[^@\s]+@[^@\s]+\.[^@\s]+$/, message: "Not an email" } }) })),
-    h(Field, { id: "phone", label: "Phone", error: errors.phone },
-      h("input", { type: "tel", ...aria("phone"), ...register("phone") })),
-    h(Field, { id: "bio", label: "About you", error: errors.bio },
-      h("textarea", { maxLength: 20, ...aria("bio"), ...register("bio") })),
-    h(Field, { id: "account", label: "Account ID" },
-      h("input", { readOnly: true, ...aria("account"), ...register("account") })),
-    h("div", { className: "question" },
-      h("div", { className: "question-title" }, "Where are you located?"),
-      h("input", { placeholder: "Start typing...", ...register("location") })),
-  );
+function start() {
+  const root = document.getElementById("root");
+  root.append(document.getElementById("form").content.cloneNode(true));
+  root.querySelector("form").addEventListener("submit", (e) => e.preventDefault());
+  const shows = [];
+  const form = createForm({ defaultValues: { account: "A-1001" }, onUpdate: () => shows.forEach((show) => show()) });
+  for (const el of root.querySelectorAll("form [name]")) {
+    form.register(el.name, el, RULES[el.name]);
+    if (!el.id) continue;
+    const slot = errorSlot(el, `${el.id}-error`);
+    shows.push(() => {
+      const message = form.errorOf(el.name);
+      el.setAttribute("aria-invalid", message ? "true" : "false");
+      slot(message);
+    });
+  }
+  publishState(() => form.state());
+  installFixture();
 }
 
 const params = new URLSearchParams(location.search);
 const delay = Number(params.get("hydrateAfter") ?? 0); // ?hydrateAfter=1500 for the late-form case
-setTimeout(() => { createRoot(document.getElementById("root")).render(h(App)); installFixture(); }, delay);
+setTimeout(start, delay);
 </script>
 </body>
 </html>
