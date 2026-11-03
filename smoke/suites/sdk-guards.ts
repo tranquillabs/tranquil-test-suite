@@ -55,7 +55,9 @@ export async function sdkGuards(cdp: Cdp): Promise<void> {
 
     // With `submit`, the same click is refused until the person says yes; the test answers Allow.
     const asking = runAutomation(cdp, `${root}/fixtures/automations/sdk-guards-submit.ts`);
-    const question = `atom.notifications.getNotifications().find((n) => n.getMessage() === "sdk-guards-submit.ts asks:" && !n.isDismissed())`;
+    // The title is Markdown with the script's name escaped (UiCap.confirm), so it shows as written.
+    const title = JSON.stringify("sdk\\-guards\\-submit\\.ts asks:");
+    const question = `atom.notifications.getNotifications().find((n) => n.getMessage() === ${title} && !n.isDismissed())`;
     await cdp.waitFor(`!!(${question})`, { timeout: 30000 });
     await cdp.evalInAtom(`((n) => (n.getOptions().buttons.find((b) => b.text === "Allow").onDidClick(), true))(${question})`);
     const allowed = resultOf<{ beforeYes: string; yes: boolean; clicked: string }>(await asking);
