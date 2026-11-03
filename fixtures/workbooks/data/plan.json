@@ -1,0 +1,6 @@
+{
+  "steps": [
+    { "target": { "label": "Name" }, "value": "Acme Ltd" },
+    { "target": { "label": "Email" }, "value": "jo@acme.test" }
+  ]
+}
