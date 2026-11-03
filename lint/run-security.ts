@@ -3,8 +3,7 @@
 // counterpart in the Pulsar checkout at ../pulsar. Shell launchers (bin/*) and deno.json tasks
 // are not JavaScript, so their Deno flags are checked as text. Exits non-zero on any finding, or when a repo is missing.
 import { walk } from "jsr:@std/fs@^1/walk";
-import minimatch from "npm:minimatch@3.1.2";
-import { fromFileUrl, join, relative, resolve } from "jsr:@std/path@^1";
+import { fromFileUrl, globToRegExp, join, relative, resolve } from "jsr:@std/path@^1";
 import { checkLlmFiles } from "./llm-files.ts";
 
 const here = fromFileUrl(new URL(".", import.meta.url));
@@ -132,14 +131,16 @@ const TEST_FILE = /(_test|-spec|\.spec)\.[a-z]+$|(^|\/)(spec|test|tests|__tests_
     console.error("lint:security: could not find the files patterns in script/electron-builder.js");
     Deno.exit(2);
   }
+  // Glob matching comes from Deno's standard library, so the lint uses no npm package.
   const patterns = block.split("\n").filter((l) => !/^\s*\/\//.test(l))
-    .flatMap((l) => [...l.matchAll(/"([^"]+)"/g)].map((m) => m[1]));
+    .flatMap((l) => [...l.matchAll(/"([^"]+)"/g)].map((m) => m[1]))
+    .map((pat) => {
+      const negated = pat.startsWith("!");
+      return { negated, re: globToRegExp(negated ? pat.slice(1) : pat, { extended: true, globstar: true }) };
+    });
   const decide = (p: string): boolean | null => {
     let shipped: boolean | null = null;
-    for (const pat of patterns) {
-      const negated = pat.startsWith("!");
-      if (minimatch(p, negated ? pat.slice(1) : pat, { dot: true })) shipped = !negated;
-    }
+    for (const { negated, re } of patterns) if (re.test(p)) shipped = !negated;
     return shipped;
   };
   const ships = (p: string) => {
