@@ -5,8 +5,9 @@ urls: [https://example.com]
 
 # Sample workbook
 
-A workbook for trying the workbook view by hand. Edit this file in another editor and watch the
-view redraw. Running steps, ticking boxes and sending messages arrive in a later step.
+A workbook for trying the workbook view by hand. Run steps, tick boxes and send messages; edit
+this file in another editor and watch the view redraw. Each run writes its output into this file,
+so try it on a copy of this folder rather than in the repo.
 
 ## 1. A step that needs no permissions
 
@@ -20,7 +21,19 @@ scripts/hello.ts
 scripts/reads-pages.ts
 ```
 
-## 3. Data a step wrote
+## 3. A step that hands back a table
+
+```run table
+scripts/table.ts
+```
+
+## 4. A step that fails
+
+```run fails
+scripts/fails.ts
+```
+
+## 5. Data a step wrote
 
 ```file
 data/plan.json
