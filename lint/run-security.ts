@@ -1,9 +1,10 @@
 // Runs the security lint (lint/security.ts) over every owned repo, cloned as siblings of this one.
 // tranquil-client is a Pulsar fork, so only the files Tranquil added are checked: those with no
 // counterpart in the Pulsar checkout at ../pulsar. Shell launchers (bin/*) and deno.json tasks
-// are not JavaScript, so their Deno flags are checked as text. Exits non-zero on any finding, or when a repo is missing.
+// (lint/deno-tasks.ts) are not JavaScript, so their Deno flags are checked separately. Exits non-zero on any finding, or when a repo is missing.
 import { walk } from "jsr:@std/fs@^1/walk";
 import { fromFileUrl, globToRegExp, join, relative, resolve } from "jsr:@std/path@^1";
+import { checkDenoTasks } from "./deno-tasks.ts";
 import { checkLlmFiles } from "./llm-files.ts";
 
 const here = fromFileUrl(new URL(".", import.meta.url));
@@ -96,21 +97,10 @@ for (const repo of OWNED) {
   }
 }
 
-// deno.json / deno.jsonc tasks in every owned repo.
-for (const repo of OWNED) {
-  for (const name of ["deno.json", "deno.jsonc"]) {
-    const file = join(repos, repo, name);
-    const text = await Deno.readTextFile(file).catch(() => null);
-    if (text === null) continue;
-    const tasks = /"tasks"\s*:\s*\{([\s\S]*?)\n\s*\}/.exec(text)?.[1] ?? "";
-    for (const m of tasks.matchAll(/"([^"]+)"\s*:\s*"([^"]*)"/g)) {
-      const flag = UNSCOPED_IN_SHELL.exec(m[2]);
-      if (flag) {
-        failed = true;
-        console.log(`error[tranquil-security/no-unscoped-deno-permission]: task "${m[1]}" uses "${flag[2]}", which grants everything of its kind\n  --> ${file}\n`);
-      }
-    }
-  }
+// deno.json / deno.jsonc tasks anywhere in every owned repo (lint/deno-tasks.ts).
+for (const finding of await checkDenoTasks(OWNED.map((d) => join(repos, d)))) {
+  failed = true;
+  console.log(finding);
 }
 
 // Owned packages ship their code, never their tests or test data. Every test file in every owned
