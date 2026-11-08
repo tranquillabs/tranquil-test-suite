@@ -168,7 +168,8 @@ const plugin: Deno.lint.Plugin = {
     // Pulsar's Markdown renderer keeps raw HTML by default, and its sanitizer runs on defaults
     // that let <style>, <img> and <form> through (src/ui.js). Text in this window can come from
     // web pages or an LLM, so every owned call must turn raw HTML off, as a literal the lint can
-    // see, and harden the result (tranquil-automations lib/safe-markdown.js).
+    // see. Tranquil's own UI draws Markdown with the shared Markdown component instead
+    // (tranquil-automations ui/common/markdown, ADR-0032), which never parses HTML.
     "no-markdown-html": {
       create(ctx) {
         return {
@@ -183,7 +184,7 @@ const plugin: Deno.lint.Plugin = {
               ctx.report({
                 node,
                 message: "markdown.render keeps raw HTML unless told otherwise. Pass { html: false } as a " +
-                  "literal, then harden the result (lib/safe-markdown.js).",
+                  "literal, or draw Markdown with the shared Markdown component (ui/common/markdown, ADR-0032).",
               });
             }
           },
