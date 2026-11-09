@@ -1,6 +1,6 @@
 // Each security rule must flag its blanket grant and leave the scoped form alone.
 import { assertEquals } from "@std/assert";
-import plugin from "./security.ts";
+import plugin, { weakenedIn } from "./security.ts";
 
 function ids(source: string): string[] {
   return Deno.lint.runPlugin(plugin, "probe.js", source).map((d) => d.id);
@@ -46,6 +46,37 @@ Deno.test("no-insecure-webpreferences", () => {
   assertEquals(ids(`wv.setAttribute("disablewebsecurity", "");`), [rule]);
   assertEquals(ids(`wv.setAttribute("webpreferences", "contextIsolation=no");`), [rule]);
   assertEquals(ids(`new BrowserWindow({ webPreferences: { sandbox: true, contextIsolation: true, nodeIntegration: false } });`), []);
+  // Every setting, not just four: subframes, workers, insecure content, experimental features.
+  assertEquals(ids(`o = { nodeIntegrationInSubFrames: true, allowRunningInsecureContent: true, experimentalFeatures: true };`), [rule, rule, rule]);
+  // The webpreferences string read as Electron reads it: a name on its own is true, 1 and 0 count.
+  assertEquals(ids(`wv.setAttribute("webpreferences", "nodeIntegration");`), [rule]);
+  assertEquals(ids(`wv.setAttribute("webpreferences", "sandbox=0");`), [rule]);
+  assertEquals(ids(`wv.setAttribute("webpreferences", "nodeintegrationinsubframes=1, sandbox=yes");`), [rule]);
+  assertEquals(ids(`wv.setAttribute("webpreferences", "contextIsolation=yes, sandbox=1, nodeIntegration=no");`), []);
+  // In an attributes object, as the browser's tab view builds its <webview>.
+  assertEquals(ids(`webviewAttrs = { webpreferences: "contextIsolation=yes, sandbox=no" };`), [rule]);
+  assertEquals(ids(`webviewAttrs = { webpreferences: "contextIsolation=yes, sandbox=yes" };`), []);
+  assertEquals(ids(`webviewAttrs = { nodeintegration: "on", disablewebsecurity: "" };`), [rule, rule]);
+  assertEquals(ids(`webviewAttrs = { nodeintegration: false };`), []);
+  // A setting Electron no longer has isn't one.
+  assertEquals(ids(`o = { enableRemoteModule: true };`), []);
+});
+
+Deno.test("weakenedIn reads a webpreferences string as Electron does", () => {
+  assertEquals(weakenedIn("nodeIntegration, sandbox=no, webSecurity=0, contextIsolation=yes"), [
+    "nodeIntegration",
+    "sandbox",
+    "webSecurity",
+  ]);
+  assertEquals(weakenedIn("NODEINTEGRATION=yes"), ["nodeIntegration"], "names in any case");
+  assertEquals(weakenedIn("nodeIntegration=maybe"), ["nodeIntegration"], "a doubtful value counts as on");
+  assertEquals(weakenedIn("javascript=no, sandbox, unknownThing=yes"), []);
+});
+
+Deno.test("UNSCOPED_DENO's list covers every Deno permission", () => {
+  for (const name of ["read", "write", "net", "env", "run", "ffi", "sys", "import", "scripts", "all"]) {
+    assertEquals(ids(`spawn("deno", ["run", "--allow-${name}", "x.ts"]);`), ["tranquil-security/no-unscoped-deno-permission"], name);
+  }
 });
 
 Deno.test("no-markdown-html", () => {
