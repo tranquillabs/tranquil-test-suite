@@ -6,27 +6,71 @@
 // exception is a `// deno-lint-ignore tranquil-security/<rule>` comment on the line before, with
 // the reason next to it.
 
-const PERMISSION_SETTERS = new Set([
+// The names below are Electron's and Deno's, which the lint looks for in Tranquil's code.
+// lint/browser_contract_test.ts checks each Electron name against Electron's own declarations
+// (tranquil-client's electron.d.ts), and the page settings against tranquil-browser's lib/pages.js.
+
+/** Electron's session methods that decide what a page may use (camera, location, devices…). */
+export const PERMISSION_SETTER_NAMES = [
   "setPermissionRequestHandler",
   "setPermissionCheckHandler",
   "setDevicePermissionHandler",
   "setDisplayMediaRequestHandler",
   "setBluetoothPairingHandler",
-]);
-const IPC_METHODS = new Set(["send", "sendSync", "invoke", "sendToHost", "on", "once", "postMessage"]);
-// A Deno permission flag with no list after it grants everything of its kind.
-const UNSCOPED_DENO = /^(--allow-(all|read|write|net|env|run|ffi|sys|import|scripts)|-A)$/;
-const MUST_BE_OFF = new Set([
-  "nodeIntegration",
-  "nodeIntegrationInSubFrames",
-  "nodeIntegrationInWorker",
-  "allowRunningInsecureContent",
-  "enableRemoteModule",
-  "experimentalFeatures",
-]);
-const MUST_BE_ON = new Set(["webSecurity", "contextIsolation", "sandbox"]);
-const UNSAFE_WEBVIEW_ATTRS = new Set(["nodeintegration", "nodeintegrationinsubframes", "disablewebsecurity"]);
-const UNSAFE_WEBPREFERENCES = /nodeIntegration=(yes|true)|contextIsolation=(no|false)|sandbox=(no|false)|webSecurity=(no|false)/i;
+] as const;
+/** `ipcRenderer`'s methods that carry a message on a channel. */
+export const IPC_METHOD_NAMES = ["send", "sendSync", "invoke", "sendToHost", "on", "once", "postMessage"] as const;
+/**
+ * The settings every page runs with, as tranquil-browser's lib/pages.js has them (which this lint
+ * can't import: its config's import map doesn't reach a plugin). The opposite value weakens it.
+ */
+export const PAGE_PREFERENCES = {
+  sandbox: true,
+  contextIsolation: true,
+  webSecurity: true,
+  nodeIntegration: false,
+  nodeIntegrationInSubFrames: false,
+  nodeIntegrationInWorker: false,
+  allowRunningInsecureContent: false,
+  experimentalFeatures: false,
+} as const;
+/** <webview> attributes that weaken a page by being there at all. */
+export const UNSAFE_WEBVIEW_ATTRS = ["nodeintegration", "nodeintegrationinsubframes", "disablewebsecurity"] as const;
+
+// Deno's permissions, and the flags with no permission name: --allow-import, --allow-scripts and
+// --allow-all (-A). A flag with no list after it grants everything of its kind.
+type DenoPermission = Deno.PermissionName;
+const DENO_PERMISSIONS = ["read", "write", "net", "env", "run", "ffi", "sys"] as const satisfies readonly DenoPermission[];
+// Every permission Deno has is in the list above: one Deno adds fails the type check here.
+type Unlisted = Exclude<DenoPermission, (typeof DENO_PERMISSIONS)[number]>;
+const _everyDenoPermission: [Unlisted] extends [never] ? true : never = true;
+const UNSCOPED_DENO = new RegExp(`^(--allow-(${[...DENO_PERMISSIONS, "import", "scripts", "all"].join("|")})|-A)$`);
+
+const PERMISSION_SETTERS = new Set<string>(PERMISSION_SETTER_NAMES);
+const IPC_METHODS = new Set<string>(IPC_METHOD_NAMES);
+const WEBVIEW_ATTRS = new Set<string>(UNSAFE_WEBVIEW_ATTRS);
+type PagePreference = keyof typeof PAGE_PREFERENCES;
+const PREFERENCE_BY_LOWERCASE = new Map(
+  (Object.keys(PAGE_PREFERENCES) as PagePreference[]).map((name) => [name.toLowerCase(), name]),
+);
+
+/**
+ * The page settings a <webview> `webpreferences` string weakens, read as Electron reads it: a
+ * comma-separated list where a name on its own is true, `yes` and `1` are true, and `no` and `0`
+ * are false. Names match in any case, and any other value counts as true, so a doubtful string is
+ * flagged rather than let through.
+ */
+export function weakenedIn(webpreferences: string): PagePreference[] {
+  const weakened: PagePreference[] = [];
+  for (const part of webpreferences.split(",")) {
+    const [rawName, rawValue] = part.split("=", 2).map((s) => s.trim());
+    const name = PREFERENCE_BY_LOWERCASE.get(rawName.toLowerCase());
+    if (!name) continue;
+    const on = rawValue === undefined || !/^(no|0|false)$/i.test(rawValue);
+    if (on !== PAGE_PREFERENCES[name]) weakened.push(name);
+  }
+  return weakened;
+}
 
 type Node = Deno.lint.Node;
 type Fn = Deno.lint.ArrowFunctionExpression | Deno.lint.FunctionExpression;
@@ -219,25 +263,37 @@ const plugin: Deno.lint.Plugin = {
     // Electron web preferences or <webview> attributes that weaken the page's isolation.
     "no-insecure-webpreferences": {
       create(ctx) {
+        const RULE = "Pages get no Node.js, and keep context isolation, the sandbox and web security on " +
+          "(tranquil-browser lib/pages.js).";
+        // A webpreferences string, wherever it is written: as a property (an attributes object, as
+        // the browser's tab view builds) or as setAttribute's value.
+        const checkString = (node: Node, value: Maybe) => {
+          const s = stringOf(value);
+          const weakened = s === undefined ? [] : weakenedIn(s);
+          if (weakened.length) {
+            ctx.report({ node, message: `webpreferences "${s}" weakens ${weakened.join(", ")}. ${RULE}` });
+          }
+        };
         return {
           Property(node: Deno.lint.Property) {
             const k = keyName(node.key);
             if (!k) return;
-            if ((MUST_BE_OFF.has(k) && isOn(node.value)) || (MUST_BE_ON.has(k) && isOff(node.value))) {
-              ctx.report({
-                node,
-                message: `${k}: ${ctx.sourceCode.getText(node.value)} weakens page isolation. ` +
-                  "Pages get no Node.js, keep context isolation, the sandbox and web security on.",
-              });
+            const name = PREFERENCE_BY_LOWERCASE.get(k.toLowerCase());
+            if (name === k && (PAGE_PREFERENCES[name] ? isOff(node.value) : isOn(node.value))) {
+              ctx.report({ node, message: `${k}: ${ctx.sourceCode.getText(node.value)} weakens page isolation. ${RULE}` });
+            } else if (WEBVIEW_ATTRS.has(k.toLowerCase()) && !isOff(node.value)) {
+              ctx.report({ node, message: `The <webview> attribute "${k}" weakens page isolation. ${RULE}` });
+            } else if (k.toLowerCase() === "webpreferences") {
+              checkString(node, node.value);
             }
           },
           CallExpression(node: Deno.lint.CallExpression) {
             if (memberName(node.callee) !== "setAttribute") return;
             const attr = stringOf(node.arguments[0])?.toLowerCase();
-            const value = stringOf(node.arguments[1]) ?? "";
-            if ((attr && UNSAFE_WEBVIEW_ATTRS.has(attr)) ||
-              (attr === "webpreferences" && UNSAFE_WEBPREFERENCES.test(value))) {
-              ctx.report({ node, message: `The <webview> attribute "${attr}" weakens page isolation.` });
+            if (attr && WEBVIEW_ATTRS.has(attr)) {
+              ctx.report({ node, message: `The <webview> attribute "${attr}" weakens page isolation. ${RULE}` });
+            } else if (attr === "webpreferences") {
+              checkString(node, node.arguments[1]);
             }
           },
         };

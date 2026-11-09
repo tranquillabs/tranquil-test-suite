@@ -29,10 +29,11 @@ const FORK = { repo: "tranquil-client", upstream: "pulsar", dirs: ["src", "stati
 const SKIP = [/\/node_modules\//, /\/\.git\//, /\/dist\//, /\/vendor\//, /\/testdata\//, /\/fixtures\//, /\/spec\//, /\/test\//, /_test\.ts$/, /\.min\.js$/, /\.d\.ts$/];
 // The path rule (lint/paths.ts) also covers tests, where reaching into other repos is most common.
 // The types rule (lint/types.ts) covers every repo's own TypeScript: tests and fixtures too, and
-// the website and the user-facing script repos when they are cloned. Generated and vendored code is
-// not ours to type.
+// the website and the user-facing script repos when they are cloned. Hand-written declaration files
+// (.d.ts, such as tranquil-rpc's published types) are ours too, so they are checked; generated and
+// vendored code is not ours to type (SvelteKit writes .svelte-kit and .svelte-kit-build).
 const TYPED_ALSO = ["www-tranquil", "tranquil-examples", "tranquil-ops-demo"];
-const TYPE_SKIP = [/\/node_modules\//, /\/\.git\//, /\/dist\//, /\/vendor\//, /\/testdata\//, /\/\.svelte-kit\//, /\/build\//, /\.d\.ts$/];
+const TYPE_SKIP = [/\/node_modules\//, /\/\.git\//, /\/dist\//, /\/vendor\//, /\/testdata\//, /\/\.svelte-kit[^/]*\//, /\/build\//];
 const PATH_SKIP = [/\/node_modules\//, /\/\.git\//, /\/dist\//, /\/vendor\//, /\/testdata\//, /\/fixtures\//, /\.min\.js$/, /\.d\.ts$/];
 const UNSCOPED_IN_SHELL = /(^|\s)(--allow-(all|read|write|net|env|run|ffi|sys|import|scripts)|-A)(?=\s|$|\\)/m;
 
