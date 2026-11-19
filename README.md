@@ -48,6 +48,7 @@ like every script: the runner never picks up this repo's `deno.json`.
 | `smoke/` | Deno smoke tests: `main_test.ts` and `sdk_test.ts` (runners), `lib/` (launch and CDP client), `suites/` (one file per feature), `atom-home/config.cson` (fixed config). |
 | `conformance/` | WPT accessible-name conformance for the automation SDK, with its test data. |
 | `lint/` | The security lint (`deno task lint:security`). |
+| `manual/` | Checklists for trying a step by hand in the dev app, one per step, dated: `YYYY-MM-DD-<topic>.md`. |
 
 ## Conventions
 
