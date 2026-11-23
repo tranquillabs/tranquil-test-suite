@@ -96,7 +96,7 @@ Never fill and never submit a live form here.
 
   ```ts
   // Tranquil automation. Rules for writing and changing it: ~/.tranquil/llm/writing-automations.md
-  // Lists the form fields of the browser tab last in focus, without changing anything.
+  // Lists the form fields of the web page showing beside it, without changing anything.
   // @permissions tabs
   import { tabs } from "tranquil/automation";
 
@@ -104,8 +104,9 @@ Never fill and never submit a live form here.
   console.log(JSON.stringify(await tab.fields(), null, 1));
   ```
 
-- [ ] Open a public job posting with an application form in a browser tab, and click in the page.
-- [ ] Open `~/Desktop/list-fields.ts` and press **⌘⇧R**.
+- [ ] Open `~/Desktop/list-fields.ts`, and a public job posting with an application form in a
+  browser tab beside it (split the pane, so both show).
+- [ ] With `list-fields.ts` focused, press **⌘⇧R**.
 - [ ] The run's output lists one entry per field on the form, with the labels and required marks
   shown on screen, and nothing on the page changes.
 - [ ] Repeat with a posting from a different job board. If the output is `[]`, the form sits in a
